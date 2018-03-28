@@ -75,19 +75,17 @@ class MainActivity : Activity() {
 
         qr_display.setQRCode("ethereum:" + keyStore.accounts[0].address.hex)
 
-        Thread(Runnable {
-            while (true) {
-
-                SystemClock.sleep(5000)
-            }
-        }).start()
-
-
         var currentNewHead = 0L
         var running = true
         var round = 1
         var lastBalance = ZERO
 
+        Thread(Runnable {
+            while (true) {
+                toggleServo()
+                SystemClock.sleep(3000)
+            }
+        }).start()
 
         Thread(Runnable {
             ethereumNode.start()
