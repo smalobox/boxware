@@ -73,7 +73,8 @@ class MainActivity : Activity() {
             State.hasInitialAccount = true
         }
 
-        qr_display.setQRCode("ethereum:" + keyStore.accounts[0].address.hex)
+        qr_display.setQRCode("ethereum:0xE2698bAA693aAC31Ed1Cc12A8c7F1234aE405A6e@4/rent?value=0.001e18")
+        //qr_display.setQRCode("ethereum:" + keyStore.accounts[0].address.hex)
 
         var currentNewHead = 0L
         var running = true
