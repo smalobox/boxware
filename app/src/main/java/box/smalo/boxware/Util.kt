@@ -1,7 +1,17 @@
 package box.smalo.boxware
 
+import android.graphics.drawable.BitmapDrawable
+import android.widget.ImageView
+import net.glxn.qrgen.android.QRCode
 import java.net.NetworkInterface
 import java.util.*
+
+fun ImageView.setQRCode(content: String) {
+    val drawable = BitmapDrawable(resources, QRCode.from(content).bitmap())
+    drawable.setAntiAlias(false)
+    drawable.isFilterBitmap = false
+    setImageDrawable(drawable)
+}
 
 fun getIPAddress(useIPv4: Boolean): String {
     try {
