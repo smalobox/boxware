@@ -32,6 +32,15 @@ dependencies {
     implementation 'com.google.android.things.contrib:driver-pwmservo:0.4'
     implementation 'com.github.kenglxn.QRGen:android:2.4.0'
 
+    compile "com.github.walleth.kethereum:functions:$kethereum_version"
+    compile "com.github.walleth.kethereum:bip44:$kethereum_version"
+    compile "com.github.walleth.kethereum:erc55:$kethereum_version"
+    compile "com.github.walleth.kethereum:eip155:$kethereum_version"
+    compile "com.github.walleth.kethereum:erc681:$kethereum_version"
+    compile "com.github.walleth.kethereum:keccak_shortcut:$kethereum_version"
+    compile "com.github.walleth.kethereum:method_signatures:$kethereum_version"
+    compile "com.github.walleth.kethereum:rlp:$kethereum_version"
+
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.1'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
