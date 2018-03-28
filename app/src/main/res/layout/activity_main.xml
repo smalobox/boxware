@@ -25,6 +25,6 @@
     </LinearLayout>
     <ImageView
             android:id="@+id/qr_display"
-            android:layout_width="256dp"
-            android:layout_height="256dp"/>
+            android:layout_width="@dimen/qr_width"
+            android:layout_height="@dimen/qr_height"/>
 </LinearLayout>
