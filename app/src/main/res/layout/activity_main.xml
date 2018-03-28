@@ -6,10 +6,25 @@
         android:layout_height="match_parent"
         tools:context="box.smalo.boxware.MainActivity">
 
-    <TextView
+    <LinearLayout
+            android:orientation="vertical"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/main_text"
-            android:text="test"/>
+            android:layout_height="wrap_content">
 
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/main_text"
+                android:text="test"/>
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/node_text"
+                android:text="test"/>
+    </LinearLayout>
+    <ImageView
+            android:id="@+id/qr_display"
+            android:layout_width="256dp"
+            android:layout_height="256dp"/>
 </LinearLayout>
