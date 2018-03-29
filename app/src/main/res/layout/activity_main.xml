@@ -6,6 +6,7 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:padding="32dp"
+        android:background="#FFFFFF"
         tools:context="box.smalo.boxware.MainActivity">
 
     <ImageView android:layout_width="match_parent"
