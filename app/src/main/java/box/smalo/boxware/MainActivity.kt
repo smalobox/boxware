@@ -19,10 +19,10 @@ import java.math.BigInteger
 
 val TOPIC_RENTED = "Rented(address,address,uint256,uint256)".toByteArray().keccak().toHexString()
 val TOPIC_OPENED = "Opened(address,address)".toByteArray().keccak().toHexString()
-val TOPIC_CLOSED = "Returned(address,address)".toByteArray().keccak().toHexString()
+val TOPIC_CLOSED = "Closed(address,address)".toByteArray().keccak().toHexString()
 
-val contractAddress = "0x2f6bd3a816f4de987b89c3dc21e1a56097f64fa3"
-
+//val contractAddress = "0x2f6bd3a816f4de987b89c3dc21e1a56097f64fa3"
+val contractAddress = "0x792768719651e03e4db560ad02e45beaa05f1139"
 class MainActivity : Activity() {
 
     var isBoxOpen = false
@@ -57,7 +57,7 @@ class MainActivity : Activity() {
             while (true) {
                 try {
 
-                    val url = "https://rinkeby.etherscan.io/api?module=logs&action=getLogs&fromBlock=" + (State.lastProcessedBlock + 1L) + "&toBlock=latest&address=0x2f6bd3a816f4de987b89c3dc21e1a56097f64fa3"
+                    val url = "https://rinkeby.etherscan.io/api?module=logs&action=getLogs&fromBlock=" + (State.lastProcessedBlock + 1L) + "&toBlock=latest&address=$contractAddress"
                     val json = okhttp_client.newCall(Request.Builder().url(url).build()).execute().body()?.string()
 
 
@@ -112,14 +112,23 @@ class MainActivity : Activity() {
         var text = "Last action Block: " + State.lastProcessedBlock
         text += "\nRound: $round"
         text += "\nRented: " + if (secondsLeft > 0) {
-            qr_display.setQRCode("ethereum:$contractAddress@4/open?value=0&gas=200000")
             secondsLeft.toString() + "s"
         } else {
-            qr_display.setQRCode("ethereum:$contractAddress@4/rent?value=0.001e18&gas=200000")
             "no"
         }
+        if (secondsLeft < 0) {
+            isBoxOpen = false
+        }
+        val newQR=when {
+            isBoxOpen -> "ethereum:$contractAddress@4/close?value=0&gas=200000"
+            (secondsLeft > 0) -> "ethereum:$contractAddress@4/open?value=0&gas=200000"
+            else -> "ethereum:$contractAddress@4/rent?value=0.003e18&gas=200000"
+        }
+        qr_display.setQRCode(newQR)
+
         text += "\nOpen: " + if (isBoxOpen) "yes" else "no"
         node_text.text = text
+        adjustServo()
     }
 
     private fun secondsLeft() = ((rentedUntil ?: 0) - System.currentTimeMillis()) / 1000
