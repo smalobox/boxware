@@ -31,14 +31,14 @@
                     android:layout_height="wrap_content"
                     android:id="@+id/main_text"
                     android:textSize="@dimen/font_size"
-                    android:text="test"/>
+                    tools:text="connecting"/>
 
             <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/node_text"
                     android:textSize="@dimen/font_size"
-                    android:text="test"/>
+                    android:text="connecting"/>
         </LinearLayout>
 
         <FrameLayout android:layout_width="0dp"
