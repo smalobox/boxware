@@ -46,7 +46,7 @@
                      android:layout_height="match_parent">
 
             <ImageView
-                    android:layout_gravity="center"
+                    android:layout_gravity="bottom|right"
                     android:id="@+id/qr_display"
                     android:scaleType="fitXY"
                     android:layout_width="@dimen/qr_width"
