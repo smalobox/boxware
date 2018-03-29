@@ -8,13 +8,14 @@ import android.view.Window
 import android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN
 import com.google.android.things.contrib.driver.pwmservo.Servo
 import kotlinx.android.synthetic.main.activity_main.*
-import org.ethereum.geth.*
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 import org.kethereum.keccakshortcut.keccak
+import org.walleth.khex.hexToByteArray
 import org.walleth.khex.toHexString
 import org.walleth.khex.toNoPrefixHexString
-import java.io.File
 import java.math.BigInteger
-import java.math.BigInteger.ZERO
 
 val TOPIC_RENTED = "Rented(address,address,uint256,uint256)".toByteArray().keccak().toHexString()
 val TOPIC_OPENED = "Opened(address,address)".toByteArray().keccak().toHexString()
@@ -24,18 +25,7 @@ val contractAddress = "0x2f6bd3a816f4de987b89c3dc21e1a56097f64fa3"
 
 class MainActivity : Activity() {
 
-    private val keyStoreFile by lazy { File(filesDir, "keystore") }
-    private val keyStore by lazy { KeyStore(keyStoreFile.absolutePath, Geth.LightScryptN, Geth.LightScryptP) }
-
-    private var rentedUntil: Long? = null
-
-    var foo = 1
-
-    private enum class Network {
-        RINKEBY, MAIN, ROPSTEN
-    }
-
-    private var currentNet = Network.RINKEBY
+    var isBoxOpen = false
 
     private val servo by lazy {
         Servo("PWM0").apply {
@@ -44,34 +34,8 @@ class MainActivity : Activity() {
         }
     }
 
-    private val nodeConfig by lazy {
-        NodeConfig().apply {
-            when (currentNet) {
-                Network.RINKEBY -> {
-                    ethereumNetworkID = 4L
-                    ethereumGenesis = Geth.rinkebyGenesis()
-
-                    ethereumNetStats = "smartLockBox:Respect my authoritah!@stats.rinkeby.io"
-                }
-                Network.MAIN -> {
-                    ethereumGenesis = Geth.mainnetGenesis()
-                }
-
-                Network.ROPSTEN -> {
-                    ethereumNetworkID = 3L
-                    ethereumGenesis = Geth.testnetGenesis()
-                }
-
-            }
-        }
-    }
-
-    private val ethereumContext by lazy { Context() }
-    private val ethereumNode by lazy {
-        Geth.newNode(cacheDir.absolutePath + "/ethereum4_" + currentNet.toString().toLowerCase(), nodeConfig)
-    }
-
-    private val startNode = true
+    private var rentedUntil: Long? = null
+    var round = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,128 +51,81 @@ class MainActivity : Activity() {
 
         main_text.text = getIPAddress(true)
 
-        if (startNode) {
-            main_text.text = "starting:" + getIPAddress(true)
-            if (!State.hasInitialAccount) {
-                keyStore.newAccount(DEFAULT_PASSWORD)
-                State.hasInitialAccount = true
-            }
+        val okhttp_client = OkHttpClient.Builder().build()
 
-            qr_display.setQRCode("ethereum:$contractAddress@4/rent?value=0.001e18&gas=200000")
-            //qr_display.setQRCode("ethereum:" + keyStore.accounts[0].address.hex)
+        Thread(Runnable {
+            while (true) {
+                try {
 
-            var currentNewHead = 0L
-            var running = true
-            var round = 1
-            var lastBalance = ZERO
-
-            Thread(Runnable {
-                ethereumNode.start()
-
-                ethereumNode.ethereumClient.subscribeNewHead(ethereumContext, object : NewHeadHandler {
-                    override fun onError(p0: String?) {
-                    }
-
-                    override fun onNewHead(p0: Header) {
-                        currentNewHead = p0.number
-                    }
-
-                }, 16)
-
-                var lastBlock = ethereumNode.ethereumClient.syncProgress(ethereumContext)?.highestBlock
+                    val url = "https://rinkeby.etherscan.io/api?module=logs&action=getLogs&fromBlock=" + (State.lastProcessedBlock + 1L) + "&toBlock=latest&address=0x2f6bd3a816f4de987b89c3dc21e1a56097f64fa3"
+                    val json = okhttp_client.newCall(Request.Builder().url(url).build()).execute().body()?.string()
 
 
-                class MyHandler : FilterLogsHandler {
-                    override fun onFilterLogs(p0: org.ethereum.geth.Log?) {
-                        try {
-                            synchronized(foo) {
-                                Log.i("Tag", "GotLog1" + p0.toString())
-                                Log.i("Tag", "GotLog-h" + p0!!.address.hex)
-                                Log.i("Tag", "GotLog-d" + p0.data.toList().toHexString())
-                                (0..p0.topics.size()).forEach {
-                                    if (TOPIC_RENTED.toLowerCase() == p0.topics[it].hex) {
-                                        val toNoPrefixHexString = BigInteger(p0.data.toList().subList(0, 32).toNoPrefixHexString(), 16)
-                                        Log.i("Tag", "GotLog-RENTED" + toNoPrefixHexString + "mins")
+                    val jsonArray = JSONObject(json).getJSONArray("result")
+                    Log.i("round", "result size " + jsonArray.length())
 
-                                        rentedUntil = System.currentTimeMillis() + toNoPrefixHexString.toLong() * 60 * 1000
+                    (0 until jsonArray.length()).map { jsonArray.getJSONObject(it) }.forEach {
+                        val newBlockNumber = BigInteger(it.getString("blockNumber").replace("0x", ""), 16)
+                        val topics = it.getJSONArray("topics")
+                        val data = it.getString("data")
+                        (0 until topics.length()).map { topics.getString(it) }.forEach {
+                            when (it) {
+                                TOPIC_RENTED -> {
+                                    Log.i("round", "Got - RENTED with data $data")
+                                    val time = BigInteger(data.hexToByteArray().toList().subList(0, 32).toNoPrefixHexString(), 16)
+                                    Log.i("round", "Got - RENTED with time $time")
 
-                                    }
-                                    Log.i("Tag", "GotLog-t" + it + p0.topics[it].hex)
+                                    rentedUntil = System.currentTimeMillis() + time.toLong() * 60 * 1000
+
+                                }
+                                TOPIC_OPENED -> {
+                                    Log.i("round", "Got - OPENED")
+                                    isBoxOpen = true
+                                }
+
+                                TOPIC_CLOSED -> {
+                                    Log.i("round", "Got - CLOSED")
+                                    isBoxOpen = false
                                 }
                             }
-                        } catch (e: Exception) {
                         }
+                        if (newBlockNumber > BigInteger(State.lastProcessedBlock.toString())) {
+                            State.lastProcessedBlock = newBlockNumber.toLong()
+                            Log.i("round", "new Block " + newBlockNumber.toLong())
+                        }
+
                     }
-
-                    override fun onError(p0: String?) {
-                    }
-                }
-
-
-                val query = FilterQuery().apply {
-                    addresses = Geth.newAddressesEmpty().apply { append(Geth.newAddressFromHex(contractAddress)) }
-                    fromBlock = BigInt(State.lastProcessedBlock)
-                    toBlock = BigInt(currentNewHead)
-                }
-
-
-                ethereumNode.ethereumClient.subscribeFilterLogs(ethereumContext, query, MyHandler(), 0L)
-                /*try {
-                    val filterLogs = ethereumNode.ethereumClient.filterLogs(ethereumContext, query)
-                    if (filterLogs.size() > 0) {
-                        Log.i("GotLog", "size:" + filterLogs.size())
-                    }
-                    State.lastProcessedBlock = currentNewHead
-
                 } catch (e: Exception) {
-                    Log.i("GotLog", "m:" + e.message)
+                    Log.e("round", "error", e)
                 }
-                */
-
-                while (running) {
-                    SystemClock.sleep(1000)
-                    val currentBlock = ethereumNode.ethereumClient.syncProgress(ethereumContext)?.currentBlock
-                    val highestBlock = ethereumNode.ethereumClient.syncProgress(ethereumContext)?.highestBlock
-                    if (lastBlock != currentBlock) {
-                        lastBlock = currentBlock
-                    }
-
-                    round++
-
-                    //val balanceBigInt = ethereumNode.ethereumClient.getBalanceAt(ethereumContext, keyStore.accounts[0].address, currentNewHead)
-                    //val balance = BigInteger(balanceBigInt.string())
-
-                    /*if (lastBalance != balance) {
-                    toggleServo()
-                    lastBalance = balance
-                }*/
-
-                    runOnUiThread {
-
-                        val secondsLeft = secondsLeft()
-                        var text = "Block: " + currentNewHead + "/" + (highestBlock
-                                ?: currentNewHead) + "\nPeers:" + ethereumNode.peersInfo.size() + " - Tick:$round\nid=" + BuildConfig.APPLICATION_ID
-                        text += "\nrented: " + if (secondsLeft > 0) {
-                            secondsLeft.toString() + "s"
-                        } else {
-                            "no"
-                        }
-                        text += "\nLP: " + State.lastProcessedBlock
-                        node_text.text = text
-                    }
+                runOnUiThread {
+                    updateText()
                 }
+                SystemClock.sleep(1000)
+                round++
+            }
+        }).start()
+    }
 
-                ethereumNode.stop()
-            }).start()
+    private fun updateText() {
+        val secondsLeft = secondsLeft()
+        var text = "Last action Block: " + State.lastProcessedBlock
+        text += "\nRound: $round"
+        text += "\nRented: " + if (secondsLeft > 0) {
+            qr_display.setQRCode("ethereum:$contractAddress@4/open?value=0&gas=200000")
+            secondsLeft.toString() + "s"
+        } else {
+            qr_display.setQRCode("ethereum:$contractAddress@4/rent?value=0.001e18&gas=200000")
+            "no"
         }
+        text += "\nOpen: " + if (isBoxOpen) "yes" else "no"
+        node_text.text = text
     }
 
-    private fun secondsLeft() = synchronized(foo) {
-        ((rentedUntil ?: 0) - System.currentTimeMillis()) / 1000
-    }
+    private fun secondsLeft() = ((rentedUntil ?: 0) - System.currentTimeMillis()) / 1000
 
-    private fun toggleServo() {
-        if (servo.angle > 0) {
+    private fun adjustServo() {
+        if (isBoxOpen) {
             servo.angle = 0.0
         } else {
             servo.angle = 180.0

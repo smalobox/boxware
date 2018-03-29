@@ -25,7 +25,6 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.android.support.constraint:constraint-layout:1.0.2'
-    implementation "org.ethereum:geth:1.8.2"
 
     compile 'com.chibatching.kotpref:kotpref:2.5.0'
     compile 'com.chibatching.kotpref:initializer:2.5.0'
@@ -40,6 +39,8 @@ dependencies {
     compile "com.github.walleth.kethereum:keccak_shortcut:$kethereum_version"
     compile "com.github.walleth.kethereum:method_signatures:$kethereum_version"
     compile "com.github.walleth.kethereum:rlp:$kethereum_version"
+
+    compile 'com.squareup.okhttp3:okhttp:3.10.0'
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.1'
