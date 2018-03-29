@@ -135,9 +135,9 @@ class MainActivity : Activity() {
 
     private fun adjustServo() {
         if (isBoxOpen) {
-            servo.angle = 180.0
+            servo.angle = 135.0
         } else {
-            servo.angle = 0.0
+            servo.angle = 45.0
         }
     }
 }
